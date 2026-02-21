@@ -25,14 +25,25 @@
                             <td class="px-6 py-4 font-medium text-gray-900">{{ $item['product']->name }}</td>
                             <td class="px-6 py-4 text-center text-gray-600">${{ number_format($item['product']->price, 2) }}</td>
                             <td class="px-6 py-4 text-center">
-                                <form action="{{ route('cart.update', $item['product']->id) }}" method="POST" class="inline-flex items-center gap-2">
+                                <form action="{{ route('cart.update', $item['product']->id) }}" method="POST" id="cart-form-{{ $item['product']->id }}">
                                     @csrf
                                     @method('PATCH')
-                                    <select name="quantity" onchange="this.form.submit()" class="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500">
-                                        @for($i = 1; $i <= min($item['product']->stock_quantity, 10); $i++)
-                                            <option value="{{ $i }}" {{ $item['quantity'] == $i ? 'selected' : '' }}>{{ $i }}</option>
-                                        @endfor
-                                    </select>
+                                    <input type="hidden" name="quantity" id="cart-qty-input-{{ $item['product']->id }}" value="{{ $item['quantity'] }}">
+                                    <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                                        <button type="button"
+                                                onclick="cartChangeQty({{ $item['product']->id }}, -1, {{ min($item['product']->stock_quantity, 99) }})"
+                                                class="px-3 py-1.5 text-gray-600 hover:bg-gray-100 transition text-sm font-bold">
+                                            &minus;
+                                        </button>
+                                        <span id="cart-qty-display-{{ $item['product']->id }}" class="px-3 py-1.5 text-sm font-medium text-gray-900 min-w-[2rem] text-center">
+                                            {{ $item['quantity'] }}
+                                        </span>
+                                        <button type="button"
+                                                onclick="cartChangeQty({{ $item['product']->id }}, 1, {{ min($item['product']->stock_quantity, 99) }})"
+                                                class="px-3 py-1.5 text-gray-600 hover:bg-gray-100 transition text-sm font-bold">
+                                            +
+                                        </button>
+                                    </div>
                                 </form>
                             </td>
                             <td class="px-6 py-4 text-center font-semibold text-gray-900">${{ number_format($item['subtotal'], 2) }}</td>
@@ -79,4 +90,27 @@
             </a>
         </div>
     @endif
+
+    <script>
+        const cartDebounceTimers = {};
+
+        function cartChangeQty(productId, delta, max) {
+            const input = document.getElementById('cart-qty-input-' + productId);
+            const display = document.getElementById('cart-qty-display-' + productId);
+            const form = document.getElementById('cart-form-' + productId);
+            let current = parseInt(input.value) || 1;
+            let newVal = Math.max(1, Math.min(current + delta, max));
+
+            input.value = newVal;
+            display.textContent = newVal;
+            display.classList.add('text-indigo-600');
+
+            // Debounce: wait 600ms after last click before submitting the form
+            clearTimeout(cartDebounceTimers[productId]);
+            cartDebounceTimers[productId] = setTimeout(function () {
+                display.classList.remove('text-indigo-600');
+                form.submit();
+            }, 600);
+        }
+    </script>
 @endsection

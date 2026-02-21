@@ -26,15 +26,24 @@
                     </div>
 
                     @if($product->stock_quantity > 0)
-                        <form action="{{ route('cart.add') }}" method="POST" class="mt-4">
+                        <form action="{{ route('cart.add') }}" method="POST" class="mt-4" id="add-form-{{ $product->id }}">
                             @csrf
                             <input type="hidden" name="product_id" value="{{ $product->id }}">
+                            <input type="hidden" name="quantity" id="qty-input-{{ $product->id }}" value="1">
                             <div class="flex items-center gap-2">
-                                <select name="quantity" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                                    @for($i = 1; $i <= min($product->stock_quantity, 10); $i++)
-                                        <option value="{{ $i }}">{{ $i }}</option>
-                                    @endfor
-                                </select>
+                                <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                                    <button type="button"
+                                            onclick="changeQty({{ $product->id }}, -1, {{ min($product->stock_quantity, 99) }})"
+                                            class="px-3 py-2 text-gray-600 hover:bg-gray-100 transition text-sm font-bold">
+                                        &minus;
+                                    </button>
+                                    <span id="qty-display-{{ $product->id }}" class="px-3 py-2 text-sm font-medium text-gray-900 min-w-[2rem] text-center">1</span>
+                                    <button type="button"
+                                            onclick="changeQty({{ $product->id }}, 1, {{ min($product->stock_quantity, 99) }})"
+                                            class="px-3 py-2 text-gray-600 hover:bg-gray-100 transition text-sm font-bold">
+                                        +
+                                    </button>
+                                </div>
                                 <button type="submit" class="flex-1 bg-indigo-600 text-white py-2 px-4 rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
                                     Add to Cart
                                 </button>
@@ -53,4 +62,25 @@
             </div>
         @endforelse
     </div>
+
+    <script>
+        const debounceTimers = {};
+
+        function changeQty(productId, delta, max) {
+            const input = document.getElementById('qty-input-' + productId);
+            const display = document.getElementById('qty-display-' + productId);
+            let current = parseInt(input.value) || 1;
+            let newVal = Math.max(1, Math.min(current + delta, max));
+
+            input.value = newVal;
+            display.textContent = newVal;
+
+            // Debounce: reset the visual feedback after rapid clicks
+            clearTimeout(debounceTimers[productId]);
+            display.classList.add('text-indigo-600');
+            debounceTimers[productId] = setTimeout(function () {
+                display.classList.remove('text-indigo-600');
+            }, 300);
+        }
+    </script>
 @endsection
