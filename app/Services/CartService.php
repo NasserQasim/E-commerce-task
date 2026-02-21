@@ -7,8 +7,8 @@ use Illuminate\Support\Facades\Redis;
 
 class CartService
 {
-    private const CART_PREFIX = 'cart:';
-    private const CART_TTL = 86400; // 24 hours
+    private const string CART_PREFIX = 'cart:';
+    private const int CART_TTL = 86400; // 24 hours
 
     private function cartKey(string $sessionId): string
     {
