@@ -69,6 +69,7 @@
         <div class="mt-6 flex justify-end">
             <form action="{{ route('admin.orders.refund', $order) }}" method="POST" onsubmit="return confirm('Are you sure you want to refund this order? Stock will be restored.')">
                 @csrf
+                <input type="hidden" name="idempotency_key" value="{{ Str::uuid() }}">
                 <button type="submit" class="px-6 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition">
                     Refund Order
                 </button>

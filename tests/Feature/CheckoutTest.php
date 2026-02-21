@@ -96,7 +96,9 @@ class CheckoutTest extends TestCase
             'price_at_purchase' => 50.00,
         ]);
 
-        $this->post(route('admin.orders.refund', $order));
+        $this->post(route('admin.orders.refund', $order), [
+            'idempotency_key' => 'test-refund-key-1',
+        ]);
 
         $order->refresh();
         $product->refresh();
@@ -112,9 +114,44 @@ class CheckoutTest extends TestCase
             'status' => 'refunded',
         ]);
 
-        $response = $this->post(route('admin.orders.refund', $order));
+        $response = $this->post(route('admin.orders.refund', $order), [
+            'idempotency_key' => 'test-refund-key-2',
+        ]);
 
         $response->assertRedirect();
         $response->assertSessionHas('error');
+    }
+
+    public function test_idempotency_key_returns_same_response(): void
+    {
+        $product = Product::create([
+            'name' => 'Idempotency Product',
+            'price' => 30.00,
+            'stock_quantity' => 10,
+        ]);
+
+        $order = Order::create([
+            'total_amount' => 60.00,
+            'status' => 'completed',
+        ]);
+
+        $order->items()->create([
+            'product_id' => $product->id,
+            'quantity' => 2,
+            'price_at_purchase' => 30.00,
+        ]);
+
+        $refundService = app(\App\Services\RefundService::class);
+        $key = 'idempotent-test-key';
+
+        $firstResult = $refundService->refund($order, $key);
+        $secondResult = $refundService->refund($order, $key);
+
+        $this->assertEquals($firstResult, $secondResult);
+        $this->assertTrue($firstResult['success']);
+
+        // Stock should only be restored once
+        $product->refresh();
+        $this->assertEquals(12, $product->stock_quantity);
     }
 }

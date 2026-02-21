@@ -44,6 +44,7 @@
                                 @if($order->isRefundable())
                                     <form action="{{ route('admin.orders.refund', $order) }}" method="POST" onsubmit="return confirm('Are you sure you want to refund this order?')">
                                         @csrf
+                                        <input type="hidden" name="idempotency_key" value="{{ Str::uuid() }}">
                                         <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-medium transition">
                                             Refund
                                         </button>
