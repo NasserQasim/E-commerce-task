@@ -1,59 +1,163 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ShopFlow — E-Commerce Order Module
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A simplified e-commerce module built with Laravel, supporting products, cart (Redis-backed), checkout (Cash on Delivery), and admin refund functionality.
 
-## About Laravel
+## Tech Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **PHP 8.3** with Apache (Docker)
+- **Laravel 12**
+- **MySQL 8** — relational data storage
+- **Redis** — cart storage & caching layer
+- **TailwindCSS** — frontend via CDN
+- **Docker Compose** — containerized development
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Architecture
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```
+app/
+├── Http/
+│   ├── Controllers/
+│   │   ├── ProductController.php      # Product listing (cached)
+│   │   ├── CartController.php         # Cart CRUD operations
+│   │   ├── CheckoutController.php     # Checkout orchestration
+│   │   └── Admin/
+│   │       └── OrderController.php    # Order management & refunds
+│   ├── Middleware/
+│   │   └── AdminMiddleware.php        # Admin route guard
+│   └── Requests/
+│       ├── AddToCartRequest.php       # Cart add validation
+│       └── UpdateCartRequest.php      # Cart update validation
+├── Models/
+│   ├── Product.php
+│   ├── Order.php
+│   └── OrderItem.php
+└── Services/
+    ├── CartService.php                # Redis-backed cart logic
+    ├── CheckoutService.php            # Transactional order creation
+    └── RefundService.php              # Transactional refund + stock restore
+```
 
-## Learning Laravel
+### Design Decisions
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+**Service Layer Pattern** — Controllers are kept thin. All business logic lives in dedicated service classes (`CartService`, `CheckoutService`, `RefundService`). This makes the code testable, reusable, and easy to reason about.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+**Redis for Cart Storage** — Carts are stored in Redis hashes (`cart:{sessionId}`) with a 24-hour TTL. Redis was chosen over database/session because:
+- Carts are ephemeral and don't need ACID guarantees
+- Redis hash operations are atomic and fast
+- No database writes for browsing users
+- Automatic expiry cleans up abandoned carts
 
-## Laravel Sponsors
+**DB Transactions for Critical Flows** — Both checkout and refund use `DB::transaction()` to ensure atomicity:
+- **Checkout**: stock validation → stock decrement → order creation → cart clear. If any step fails, everything rolls back.
+- **Refund**: status update → stock restoration. Prevents partial refunds.
+- `lockForUpdate()` is used during checkout to prevent race conditions on stock.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+**Eloquent Relationships (No DB Foreign Keys)** — Relationships are defined at the application level via Eloquent rather than database-level foreign keys. This keeps migrations simple and gives more flexibility during development.
 
-### Premium Partners
+**Product List Caching** — The product listing is cached in Redis for 60 seconds via `Cache::remember()`, reducing database queries for the most-hit page.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### Trade-offs
 
-## Contributing
+| Decision | Pro | Con |
+|---|---|---|
+| Redis cart (no DB) | Fast, auto-expiry, no write overhead | Cart lost if Redis restarts without persistence |
+| No auth system | Simpler demo scope | Admin routes are open (middleware stub in place) |
+| Session-based cart ID | No login required | Cart tied to browser session |
+| No DB foreign keys | Simpler migrations, flexible dev | No DB-level referential integrity enforcement |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Setup Instructions
 
-## Code of Conduct
+### Prerequisites
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- Docker & Docker Compose installed
+- Ports 8000, 3307, 6379, 8081 available
 
-## Security Vulnerabilities
+### Quick Start
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+# 1. Clone the repository
+git clone <repo-url> && cd E-commerce-task
 
-## License
+# 2. Copy environment file
+cp .env.example .env
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+# 3. Build and start containers
+docker compose up -d --build
+
+# 4. Install dependencies
+docker exec ecommerce_app composer install
+
+# 5. Generate app key
+docker exec ecommerce_app php artisan key:generate
+
+# 6. Run migrations and seed products
+docker exec ecommerce_app php artisan migrate:fresh --seed
+
+# 7. Open in browser
+open http://localhost:8000
+```
+
+### Services
+
+| Service | URL |
+|---|---|
+| Application | http://localhost:8000 |
+| phpMyAdmin | http://localhost:8081 |
+| MySQL | localhost:3307 |
+| Redis | localhost:6379 |
+
+## How to Test
+
+### Manual Testing
+
+1. **Browse products** — Visit http://localhost:8000
+2. **Add to cart** — Select quantity and click "Add to Cart"
+3. **View cart** — Click cart icon in navigation
+4. **Checkout** — Click "Checkout (COD)" button
+5. **Admin orders** — Visit http://localhost:8000/admin/orders
+6. **Refund** — Click "Refund" on a completed order
+
+### Seed Products
+
+```bash
+docker exec ecommerce_app php artisan db:seed --class=ProductSeeder
+```
+
+### Run Tests
+
+```bash
+docker exec ecommerce_app php artisan test
+```
+
+### Test Refund Flow
+
+1. Add products to cart and checkout
+2. Go to http://localhost:8000/admin/orders
+3. Click "View" on an order to see details
+4. Click "Refund" — stock quantities will be restored
+5. Attempting to refund again will show an error (double-refund prevention)
+
+## Docker Commands
+
+```bash
+# Start all services
+docker compose up -d
+
+# Rebuild after Dockerfile changes
+docker compose up -d --build
+
+# View logs
+docker compose logs -f app
+
+# Stop all services
+docker compose down
+
+# Reset database
+docker exec ecommerce_app php artisan migrate:fresh --seed
+
+# Run artisan commands
+docker exec ecommerce_app php artisan <command>
+
+# Access container shell
+docker exec -it ecommerce_app bash
+```
