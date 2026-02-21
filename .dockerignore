@@ -1,0 +1,7 @@
+.git
+.idea
+.DS_Store
+vendor
+node_modules
+.env
+docker-compose.yml
