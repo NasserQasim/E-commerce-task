@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Services\RefundService;
 use Illuminate\Http\Request;
 
@@ -11,20 +12,19 @@ class OrderController extends Controller
 {
     public function __construct(
         private RefundService $refundService,
+        private OrderRepositoryInterface $orderRepository,
     ) {}
 
     public function index()
     {
-        $orders = Order::with('items.product')
-            ->latest()
-            ->paginate(15);
+        $orders = $this->orderRepository->paginateWithItems(15);
 
         return view('admin.orders.index', compact('orders'));
     }
 
     public function show(Order $order)
     {
-        $order->load('items.product');
+        $this->orderRepository->loadItems($order);
 
         return view('admin.orders.show', compact('order'));
     }

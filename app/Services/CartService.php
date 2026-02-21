@@ -2,13 +2,17 @@
 
 namespace App\Services;
 
-use App\Models\Product;
+use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Support\Facades\Redis;
 
 class CartService
 {
     private const string CART_PREFIX = 'cart:';
     private const int CART_TTL = 86400; // 24 hours
+
+    public function __construct(
+        private ProductRepositoryInterface $productRepository,
+    ) {}
 
     private function cartKey(string $sessionId): string
     {
@@ -25,7 +29,7 @@ class CartService
 
         $items = [];
         foreach ($cart as $productId => $quantity) {
-            $product = Product::find($productId);
+            $product = $this->productRepository->find($productId);
             if ($product) {
                 $items[] = [
                     'product' => $product,
@@ -40,7 +44,7 @@ class CartService
 
     public function addItem(string $sessionId, int $productId, int $quantity): array
     {
-        $product = Product::findOrFail($productId);
+        $product = $this->productRepository->findOrFail($productId);
 
         $currentQuantity = (int) Redis::hget($this->cartKey($sessionId), $productId);
         $newQuantity = $currentQuantity + $quantity;
@@ -67,7 +71,10 @@ class CartService
             return $this->removeItem($sessionId, $productId);
         }
 
-        $product = Product::findOrFail($productId);
+        /**
+         * @var \App\Models\Product $product
+         */
+        $product = $this->productRepository->findOrFail($productId);
 
         if (!$product->hasStock($quantity)) {
             return [

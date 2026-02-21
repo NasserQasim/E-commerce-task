@@ -2,14 +2,16 @@
 
 namespace App\Services;
 
-use App\Models\Order;
-use App\Models\Product;
+use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 
 class CheckoutService
 {
     public function __construct(
         private CartService $cartService,
+        private ProductRepositoryInterface $productRepository,
+        private OrderRepositoryInterface $orderRepository,
     ) {}
 
     public function process(string $sessionId): array
@@ -29,7 +31,7 @@ class CheckoutService
                 $orderItems = [];
 
                 foreach ($cartItems as $productId => $quantity) {
-                    $product = Product::lockForUpdate()->find($productId);
+                    $product = $this->productRepository->findWithLock($productId);
 
                     if (!$product) {
                         throw new \RuntimeException("Product #{$productId} no longer exists.");
@@ -41,7 +43,7 @@ class CheckoutService
                         );
                     }
 
-                    $product->decrement('stock_quantity', $quantity);
+                    $this->productRepository->decrementStock($product->id, $quantity);
 
                     $lineTotal = $product->price * $quantity;
                     $totalAmount += $lineTotal;
@@ -53,12 +55,12 @@ class CheckoutService
                     ];
                 }
 
-                $order = Order::create([
+                $order = $this->orderRepository->create([
                     'total_amount' => $totalAmount,
                     'status' => 'completed',
                 ]);
 
-                $order->items()->createMany($orderItems);
+                $this->orderRepository->createItems($order, $orderItems);
 
                 $this->cartService->clear($sessionId);
 

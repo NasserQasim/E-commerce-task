@@ -3,7 +3,8 @@
 namespace App\Services;
 
 use App\Models\Order;
-use App\Models\Product;
+use App\Repositories\Contracts\OrderRepositoryInterface;
+use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
@@ -11,6 +12,11 @@ class RefundService
 {
     private const string IDEMPOTENCY_PREFIX = 'refund_idempotency:';
     private const int IDEMPOTENCY_TTL = 86400; // 24 hours
+
+    public function __construct(
+        private ProductRepositoryInterface $productRepository,
+        private OrderRepositoryInterface $orderRepository,
+    ) {}
 
     public function refund(Order $order, string $idempotencyKey): array
     {
@@ -35,14 +41,13 @@ class RefundService
 
         try {
             DB::transaction(function () use ($order) {
-                $order->load('items');
+                $this->orderRepository->loadItems($order);
 
                 foreach ($order->items as $item) {
-                    Product::where('id', $item->product_id)
-                        ->increment('stock_quantity', $item->quantity);
+                    $this->productRepository->incrementStock($item->product_id, $item->quantity);
                 }
 
-                $order->update(['status' => 'refunded']);
+                $this->orderRepository->updateStatus($order, 'refunded');
             });
 
             $result = [
