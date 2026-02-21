@@ -14,8 +14,8 @@ class RefundService
     private const int IDEMPOTENCY_TTL = 86400; // 24 hours
 
     public function __construct(
-        private ProductRepositoryInterface $productRepository,
-        private OrderRepositoryInterface $orderRepository,
+        private readonly ProductRepositoryInterface $productRepository,
+        private readonly OrderRepositoryInterface   $orderRepository,
     ) {}
 
     public function refund(Order $order, string $idempotencyKey): array
@@ -43,9 +43,11 @@ class RefundService
             DB::transaction(function () use ($order) {
                 $this->orderRepository->loadItems($order);
 
+                $stockMap = [];
                 foreach ($order->items as $item) {
-                    $this->productRepository->incrementStock($item->product_id, $item->quantity);
+                    $stockMap[$item->product_id] = ($stockMap[$item->product_id] ?? 0) + $item->quantity;
                 }
+                $this->productRepository->bulkIncrementStock($stockMap);
 
                 $this->orderRepository->updateStatus($order, 'refunded');
             });

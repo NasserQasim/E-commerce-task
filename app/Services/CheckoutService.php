@@ -6,12 +6,12 @@ use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Support\Facades\DB;
 
-class CheckoutService
+readonly class CheckoutService
 {
     public function __construct(
-        private CartService $cartService,
+        private CartService                $cartService,
         private ProductRepositoryInterface $productRepository,
-        private OrderRepositoryInterface $orderRepository,
+        private OrderRepositoryInterface   $orderRepository,
     ) {}
 
     public function process(string $sessionId): array

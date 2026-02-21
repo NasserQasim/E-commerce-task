@@ -18,4 +18,9 @@ interface ProductRepositoryInterface
     public function decrementStock(int $id, int $quantity): void;
 
     public function incrementStock(int $id, int $quantity): void;
+
+    /**
+     * @param array<int, int> $items Map of product ID => quantity
+     */
+    public function bulkIncrementStock(array $items): void;
 }

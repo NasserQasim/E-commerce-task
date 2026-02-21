@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Product;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Support\Facades\Redis;
 
@@ -11,7 +12,7 @@ class CartService
     private const int CART_TTL = 86400; // 24 hours
 
     public function __construct(
-        private ProductRepositoryInterface $productRepository,
+        private readonly ProductRepositoryInterface $productRepository,
     ) {}
 
     private function cartKey(string $sessionId): string
@@ -29,6 +30,9 @@ class CartService
 
         $items = [];
         foreach ($cart as $productId => $quantity) {
+            /**
+             * @var Product $product
+             */
             $product = $this->productRepository->find($productId);
             if ($product) {
                 $items[] = [
@@ -71,9 +75,6 @@ class CartService
             return $this->removeItem($sessionId, $productId);
         }
 
-        /**
-         * @var \App\Models\Product $product
-         */
         $product = $this->productRepository->findOrFail($productId);
 
         if (!$product->hasStock($quantity)) {
