@@ -121,8 +121,6 @@ class CartService
 
     public function itemCount(string $sessionId): int
     {
-        $cart = Redis::hgetall($this->cartKey($sessionId));
-
-        return array_sum(array_map('intval', $cart));
+        return Redis::hlen($this->cartKey($sessionId));
     }
 }
