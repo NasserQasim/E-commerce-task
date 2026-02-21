@@ -70,12 +70,9 @@
                     <a href="{{ route('products.index') }}" class="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
                         Continue Shopping
                     </a>
-                    <form action="{{ route('checkout.process') }}" method="POST">
-                        @csrf
-                        <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-                            Checkout (COD)
-                        </button>
-                    </form>
+                    <a href="{{ route('checkout.show') }}" class="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
+                        Proceed to Checkout
+                    </a>
                 </div>
             </div>
         </div>

@@ -18,6 +18,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
 });
 
 // Checkout
+Route::get('/checkout', [CheckoutController::class, 'show'])->name('checkout.show');
 Route::post('/checkout', [CheckoutController::class, 'process'])->name('checkout.process');
 
 // Admin
