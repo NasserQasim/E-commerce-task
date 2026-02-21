@@ -21,7 +21,7 @@ Route::prefix('cart')->name('cart.')->group(function () {
 Route::post('/checkout', [CheckoutController::class, 'process'])->name('checkout.process');
 
 // Admin
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware('admin')->group(function () {
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{order}/refund', [OrderController::class, 'refund'])->name('orders.refund');
