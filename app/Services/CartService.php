@@ -32,9 +32,12 @@ class CartService
             return [];
         }
 
+        $productIds = array_map('intval', array_keys($cart));
+        $products = $this->productRepository->findByIds($productIds);
+
         $items = [];
         foreach ($cart as $productId => $quantity) {
-            $product = $this->productRepository->find($productId);
+            $product = $products->get((int) $productId);
             if ($product) {
                 $items[] = new CartItem($product, (int) $quantity);
             }
@@ -94,9 +97,12 @@ class CartService
         Redis::del($this->cartKey($sessionId));
     }
 
-    public function getTotal(string $sessionId): float
+    /**
+     * @param  CartItem[]|null  $items  Pre-fetched items to avoid re-querying
+     */
+    public function getTotal(string $sessionId, ?array $items = null): float
     {
-        $items = $this->getItems($sessionId);
+        $items ??= $this->getItems($sessionId);
 
         return array_sum(array_map(fn(CartItem $item) => $item->subtotal->toDecimal(), $items));
     }

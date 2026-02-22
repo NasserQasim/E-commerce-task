@@ -21,7 +21,7 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
         }
 
-        $total = $this->cartService->getTotal($sessionId);
+        $total = $this->cartService->getTotal($sessionId, $items);
 
         return view('checkout.confirm', compact('items', 'total'));
     }

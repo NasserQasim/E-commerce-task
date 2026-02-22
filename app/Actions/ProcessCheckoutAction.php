@@ -27,10 +27,11 @@ class ProcessCheckoutAction
 
         try {
             $order = DB::transaction(function () use ($cartItems, $sessionId) {
-                $validatedItems = [];
+                $products = $this->productRepository->findWithLockByIds(array_keys($cartItems));
 
+                $validatedItems = [];
                 foreach ($cartItems as $productId => $quantity) {
-                    $product = $this->productRepository->findWithLock($productId);
+                    $product = $products->get($productId);
 
                     if (!$product) {
                         throw new \RuntimeException("Product #{$productId} no longer exists.");

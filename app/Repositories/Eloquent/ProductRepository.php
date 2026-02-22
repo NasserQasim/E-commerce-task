@@ -19,9 +19,19 @@ class ProductRepository implements ProductRepositoryInterface
         return Product::findOrFail($id);
     }
 
+    public function findByIds(array $ids): Collection
+    {
+        return Product::whereIn('id', $ids)->get()->keyBy('id');
+    }
+
     public function findWithLock(int $id): ?Product
     {
         return Product::lockForUpdate()->find($id);
+    }
+
+    public function findWithLockByIds(array $ids): Collection
+    {
+        return Product::lockForUpdate()->whereIn('id', $ids)->get()->keyBy('id');
     }
 
     public function all(): Collection
@@ -37,6 +47,30 @@ class ProductRepository implements ProductRepositoryInterface
     public function incrementStock(int $id, int $quantity): void
     {
         Product::where('id', $id)->increment('stock_quantity', $quantity);
+    }
+
+    public function bulkDecrementStock(array $items): void
+    {
+        if (empty($items)) {
+            return;
+        }
+
+        $cases = [];
+        $bindings = [];
+        foreach ($items as $id => $quantity) {
+            $cases[] = 'WHEN id = ? THEN stock_quantity - ?';
+            $bindings[] = $id;
+            $bindings[] = $quantity;
+        }
+
+        $ids = array_keys($items);
+        $placeholders = implode(',', array_fill(0, count($ids), '?'));
+        $bindings = array_merge($bindings, $ids);
+
+        DB::update(
+            'UPDATE products SET stock_quantity = CASE ' . implode(' ', $cases) . ' END WHERE id IN (' . $placeholders . ')',
+            $bindings
+        );
     }
 
     public function bulkIncrementStock(array $items): void

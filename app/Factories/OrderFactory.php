@@ -25,6 +25,7 @@ class OrderFactory
     {
         $total = Money::fromCents(0);
         $orderItems = [];
+        $stockMap = [];
 
         foreach ($validatedItems as ['product' => $product, 'quantity' => $quantity]) {
             $linePrice = Money::fromDecimal($product->price)->multiply($quantity);
@@ -36,8 +37,10 @@ class OrderFactory
                 'price_at_purchase' => $product->price,
             ];
 
-            $this->productRepository->decrementStock($product->id, $quantity);
+            $stockMap[$product->id] = ($stockMap[$product->id] ?? 0) + $quantity;
         }
+
+        $this->productRepository->bulkDecrementStock($stockMap);
 
         $order = $this->orderRepository->create([
             'total_amount' => $total->toDecimal(),

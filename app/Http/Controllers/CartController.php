@@ -16,7 +16,7 @@ class CartController extends Controller
     {
         $sessionId = session()->getId();
         $items = $this->cartService->getItems($sessionId);
-        $total = $this->cartService->getTotal($sessionId);
+        $total = $this->cartService->getTotal($sessionId, $items);
 
         return view('cart.index', compact('items', 'total'));
     }
