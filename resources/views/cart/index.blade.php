@@ -22,33 +22,33 @@
                 <tbody class="divide-y">
                     @foreach($items as $item)
                         <tr>
-                            <td class="px-6 py-4 font-medium text-gray-900">{{ $item['product']->name }}</td>
-                            <td class="px-6 py-4 text-center text-gray-600">${{ number_format($item['product']->price, 2) }}</td>
+                            <td class="px-6 py-4 font-medium text-gray-900">{{ $item->product->name }}</td>
+                            <td class="px-6 py-4 text-center text-gray-600">${{ number_format($item->product->price, 2) }}</td>
                             <td class="px-6 py-4 text-center">
-                                <form action="{{ route('cart.update', $item['product']->id) }}" method="POST" id="cart-form-{{ $item['product']->id }}">
+                                <form action="{{ route('cart.update', $item->product->id) }}" method="POST" id="cart-form-{{ $item->product->id }}">
                                     @csrf
                                     @method('PATCH')
-                                    <input type="hidden" name="quantity" id="cart-qty-input-{{ $item['product']->id }}" value="{{ $item['quantity'] }}">
+                                    <input type="hidden" name="quantity" id="cart-qty-input-{{ $item->product->id }}" value="{{ $item->quantity }}">
                                     <div class="inline-flex items-center border border-gray-200 rounded-lg overflow-hidden">
                                         <button type="button"
-                                                onclick="cartChangeQty({{ $item['product']->id }}, -1, {{ min($item['product']->stock_quantity, 99) }})"
+                                                onclick="cartChangeQty({{ $item->product->id }}, -1, {{ min($item->product->stock_quantity, 99) }})"
                                                 class="px-3 py-1.5 text-gray-600 hover:bg-gray-100 transition text-sm font-bold">
                                             &minus;
                                         </button>
-                                        <span id="cart-qty-display-{{ $item['product']->id }}" class="px-3 py-1.5 text-sm font-medium text-gray-900 min-w-[2rem] text-center">
-                                            {{ $item['quantity'] }}
+                                        <span id="cart-qty-display-{{ $item->product->id }}" class="px-3 py-1.5 text-sm font-medium text-gray-900 min-w-[2rem] text-center">
+                                            {{ $item->quantity }}
                                         </span>
                                         <button type="button"
-                                                onclick="cartChangeQty({{ $item['product']->id }}, 1, {{ min($item['product']->stock_quantity, 99) }})"
+                                                onclick="cartChangeQty({{ $item->product->id }}, 1, {{ min($item->product->stock_quantity, 99) }})"
                                                 class="px-3 py-1.5 text-gray-600 hover:bg-gray-100 transition text-sm font-bold">
                                             +
                                         </button>
                                     </div>
                                 </form>
                             </td>
-                            <td class="px-6 py-4 text-center font-semibold text-gray-900">${{ number_format($item['subtotal'], 2) }}</td>
+                            <td class="px-6 py-4 text-center font-semibold text-gray-900">${{ number_format($item->subtotal->toDecimal(), 2) }}</td>
                             <td class="px-6 py-4 text-center">
-                                <form action="{{ route('cart.remove', $item['product']->id) }}" method="POST">
+                                <form action="{{ route('cart.remove', $item->product->id) }}" method="POST">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-500 hover:text-red-700 text-sm font-medium transition">

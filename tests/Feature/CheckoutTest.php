@@ -2,10 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Actions\ProcessCheckoutAction;
+use App\Actions\RefundOrderAction;
 use App\Models\Order;
 use App\Models\Product;
 use App\Services\CartService;
-use App\Services\CheckoutService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Redis;
 use Tests\TestCase;
@@ -33,11 +34,10 @@ class CheckoutTest extends TestCase
 
         $cartService->addItem($sessionId, $product->id, 3);
 
-        // Call the service directly to avoid session mismatch in tests
-        $checkoutService = app(CheckoutService::class);
-        $result = $checkoutService->process($sessionId);
+        $checkoutAction = app(ProcessCheckoutAction::class);
+        $result = $checkoutAction->execute($sessionId);
 
-        $this->assertTrue($result['success']);
+        $this->assertTrue($result->success);
         $this->assertDatabaseHas('orders', [
             'total_amount' => 75.00,
             'status' => 'completed',
@@ -49,11 +49,11 @@ class CheckoutTest extends TestCase
 
     public function test_checkout_fails_with_empty_cart(): void
     {
-        $checkoutService = app(CheckoutService::class);
-        $result = $checkoutService->process('empty-session');
+        $checkoutAction = app(ProcessCheckoutAction::class);
+        $result = $checkoutAction->execute('empty-session');
 
-        $this->assertFalse($result['success']);
-        $this->assertEquals('Your cart is empty.', $result['message']);
+        $this->assertFalse($result->success);
+        $this->assertEquals('Your cart is empty.', $result->message);
     }
 
     public function test_checkout_fails_when_stock_insufficient(): void
@@ -70,11 +70,11 @@ class CheckoutTest extends TestCase
         // Manually set quantity higher than stock via Redis
         Redis::hset("cart:{$sessionId}", $product->id, 5);
 
-        $checkoutService = app(CheckoutService::class);
-        $result = $checkoutService->process($sessionId);
+        $checkoutAction = app(ProcessCheckoutAction::class);
+        $result = $checkoutAction->execute($sessionId);
 
-        $this->assertFalse($result['success']);
-        $this->assertStringContainsString('Insufficient stock', $result['message']);
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('Insufficient stock', $result->message);
     }
 
     public function test_refund_restores_stock_and_updates_status(): void
@@ -141,14 +141,14 @@ class CheckoutTest extends TestCase
             'price_at_purchase' => 30.00,
         ]);
 
-        $refundService = app(\App\Services\RefundService::class);
+        $refundAction = app(RefundOrderAction::class);
         $key = 'idempotent-test-key';
 
-        $firstResult = $refundService->refund($order, $key);
-        $secondResult = $refundService->refund($order, $key);
+        $firstResult = $refundAction->execute($order, $key);
+        $secondResult = $refundAction->execute($order, $key);
 
         $this->assertEquals($firstResult, $secondResult);
-        $this->assertTrue($firstResult['success']);
+        $this->assertTrue($firstResult->success);
 
         // Stock should only be restored once
         $product->refresh();

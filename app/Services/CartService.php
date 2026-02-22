@@ -2,7 +2,8 @@
 
 namespace App\Services;
 
-use App\Models\Product;
+use App\DTOs\CartItem;
+use App\DTOs\ServiceResult;
 use App\Repositories\Contracts\ProductRepositoryInterface;
 use Illuminate\Support\Facades\Redis;
 
@@ -20,6 +21,9 @@ class CartService
         return self::CART_PREFIX . $sessionId;
     }
 
+    /**
+     * @return CartItem[]
+     */
     public function getItems(string $sessionId): array
     {
         $cart = Redis::hgetall($this->cartKey($sessionId));
@@ -30,23 +34,16 @@ class CartService
 
         $items = [];
         foreach ($cart as $productId => $quantity) {
-            /**
-             * @var Product $product
-             */
             $product = $this->productRepository->find($productId);
             if ($product) {
-                $items[] = [
-                    'product' => $product,
-                    'quantity' => (int) $quantity,
-                    'subtotal' => $product->price * (int) $quantity,
-                ];
+                $items[] = new CartItem($product, (int) $quantity);
             }
         }
 
         return $items;
     }
 
-    public function addItem(string $sessionId, int $productId, int $quantity): array
+    public function addItem(string $sessionId, int $productId, int $quantity): ServiceResult
     {
         $product = $this->productRepository->findOrFail($productId);
 
@@ -54,22 +51,18 @@ class CartService
         $newQuantity = $currentQuantity + $quantity;
 
         if (!$product->hasStock($newQuantity)) {
-            return [
-                'success' => false,
-                'message' => "Insufficient stock. Only {$product->stock_quantity} available.",
-            ];
+            return ServiceResult::failure(
+                "Insufficient stock. Only {$product->stock_quantity} available."
+            );
         }
 
         Redis::hset($this->cartKey($sessionId), $productId, $newQuantity);
         Redis::expire($this->cartKey($sessionId), self::CART_TTL);
 
-        return [
-            'success' => true,
-            'message' => "{$product->name} added to cart.",
-        ];
+        return ServiceResult::success("{$product->name} added to cart.");
     }
 
-    public function updateItem(string $sessionId, int $productId, int $quantity): array
+    public function updateItem(string $sessionId, int $productId, int $quantity): ServiceResult
     {
         if ($quantity <= 0) {
             return $this->removeItem($sessionId, $productId);
@@ -78,29 +71,22 @@ class CartService
         $product = $this->productRepository->findOrFail($productId);
 
         if (!$product->hasStock($quantity)) {
-            return [
-                'success' => false,
-                'message' => "Insufficient stock. Only {$product->stock_quantity} available.",
-            ];
+            return ServiceResult::failure(
+                "Insufficient stock. Only {$product->stock_quantity} available."
+            );
         }
 
         Redis::hset($this->cartKey($sessionId), $productId, $quantity);
         Redis::expire($this->cartKey($sessionId), self::CART_TTL);
 
-        return [
-            'success' => true,
-            'message' => 'Cart updated.',
-        ];
+        return ServiceResult::success('Cart updated.');
     }
 
-    public function removeItem(string $sessionId, int $productId): array
+    public function removeItem(string $sessionId, int $productId): ServiceResult
     {
         Redis::hdel($this->cartKey($sessionId), $productId);
 
-        return [
-            'success' => true,
-            'message' => 'Item removed from cart.',
-        ];
+        return ServiceResult::success('Item removed from cart.');
     }
 
     public function clear(string $sessionId): void
@@ -112,7 +98,7 @@ class CartService
     {
         $items = $this->getItems($sessionId);
 
-        return array_sum(array_column($items, 'subtotal'));
+        return array_sum(array_map(fn(CartItem $item) => $item->subtotal->toDecimal(), $items));
     }
 
     public function getRawCart(string $sessionId): array

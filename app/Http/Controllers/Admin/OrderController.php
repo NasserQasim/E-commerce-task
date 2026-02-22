@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\RefundOrderAction;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Repositories\Contracts\OrderRepositoryInterface;
-use App\Services\RefundService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
     public function __construct(
-        private RefundService $refundService,
+        private RefundOrderAction $refundOrderAction,
         private OrderRepositoryInterface $orderRepository,
     ) {}
 
@@ -35,11 +35,11 @@ class OrderController extends Controller
             'idempotency_key' => 'required|string|max:64',
         ]);
 
-        $result = $this->refundService->refund($order, $request->input('idempotency_key'));
+        $result = $this->refundOrderAction->execute($order, $request->input('idempotency_key'));
 
         return redirect()->route('admin.orders.index')->with(
-            $result['success'] ? 'success' : 'error',
-            $result['message'],
+            $result->success ? 'success' : 'error',
+            $result->message,
         );
     }
 }

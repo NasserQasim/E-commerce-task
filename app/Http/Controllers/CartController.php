@@ -30,8 +30,8 @@ class CartController extends Controller
         );
 
         return redirect()->back()->with(
-            $result['success'] ? 'success' : 'error',
-            $result['message'],
+            $result->success ? 'success' : 'error',
+            $result->message,
         );
     }
 
@@ -44,8 +44,8 @@ class CartController extends Controller
         );
 
         return redirect()->route('cart.index')->with(
-            $result['success'] ? 'success' : 'error',
-            $result['message'],
+            $result->success ? 'success' : 'error',
+            $result->message,
         );
     }
 
@@ -57,8 +57,8 @@ class CartController extends Controller
         );
 
         return redirect()->route('cart.index')->with(
-            $result['success'] ? 'success' : 'error',
-            $result['message'],
+            $result->success ? 'success' : 'error',
+            $result->message,
         );
     }
 }

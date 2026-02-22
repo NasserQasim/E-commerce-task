@@ -40,11 +40,11 @@
                                 </svg>
                             </div>
                             <div>
-                                <p class="font-medium text-gray-900">{{ $item['product']->name }}</p>
-                                <p class="text-sm text-gray-500">${{ number_format($item['product']->price, 2) }} &times; {{ $item['quantity'] }}</p>
+                                <p class="font-medium text-gray-900">{{ $item->product->name }}</p>
+                                <p class="text-sm text-gray-500">${{ number_format($item->product->price, 2) }} &times; {{ $item->quantity }}</p>
                             </div>
                         </div>
-                        <span class="font-semibold text-gray-900">${{ number_format($item['subtotal'], 2) }}</span>
+                        <span class="font-semibold text-gray-900">${{ number_format($item->subtotal->toDecimal(), 2) }}</span>
                     </div>
                 @endforeach
             </div>

@@ -2,13 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\ProcessCheckoutAction;
 use App\Services\CartService;
-use App\Services\CheckoutService;
 
 class CheckoutController extends Controller
 {
     public function __construct(
-        private CheckoutService $checkoutService,
+        private ProcessCheckoutAction $processCheckoutAction,
         private CartService $cartService,
     ) {}
 
@@ -28,11 +28,11 @@ class CheckoutController extends Controller
 
     public function process()
     {
-        $result = $this->checkoutService->process(session()->getId());
+        $result = $this->processCheckoutAction->execute(session()->getId());
 
         return redirect()->route('products.index')->with(
-            $result['success'] ? 'success' : 'error',
-            $result['message'],
+            $result->success ? 'success' : 'error',
+            $result->message,
         );
     }
 }
