@@ -104,8 +104,53 @@ app/
 
 ### Prerequisites
 
-- Docker & Docker Compose installed
+- Docker & Docker Compose installed (see below)
 - Ports 8000, 3307, 6379, 8081 available
+
+### Install Docker (if not installed)
+
+**macOS:**
+```bash
+# Download Docker Desktop from https://www.docker.com/products/docker-desktop
+# Or install via Homebrew:
+brew install --cask docker
+# Then open Docker Desktop from Applications to start the Docker engine
+```
+
+**Ubuntu/Debian:**
+```bash
+# Update packages and install prerequisites
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg
+
+# Add Docker's official GPG key and repository
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
+# Install Docker Engine and Docker Compose plugin
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
+
+# (Optional) Run Docker without sudo
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+**Windows:**
+```
+1. Download Docker Desktop from https://www.docker.com/products/docker-desktop
+2. Run the installer and follow the prompts
+3. Enable WSL 2 backend when prompted (recommended)
+4. Restart your computer after installation
+5. Open Docker Desktop to start the Docker engine
+```
+
+**Verify installation:**
+```bash
+docker --version
+docker compose version
+```
 
 ### Quick Start
 
