@@ -15,6 +15,18 @@ A simplified e-commerce module built with Laravel, supporting products, cart (Re
 
 ```
 app/
+├── Actions/
+│   ├── ProcessCheckoutAction.php      # Single-action checkout orchestration
+│   └── RefundOrderAction.php          # Single-action refund with idempotency
+├── DTOs/
+│   ├── ServiceResult.php              # Typed result for service operations
+│   ├── CheckoutResult.php             # Checkout result with optional Order
+│   └── CartItem.php                   # Cart line item with Money subtotal
+├── Events/
+│   ├── OrderPlaced.php                # Dispatched after successful checkout
+│   └── OrderRefunded.php             # Dispatched after successful refund
+├── Factories/
+│   └── OrderFactory.php               # Encapsulates order + items creation
 ├── Http/
 │   ├── Controllers/
 │   │   ├── ProductController.php      # Product listing (cached)
@@ -27,19 +39,42 @@ app/
 │   └── Requests/
 │       ├── AddToCartRequest.php       # Cart add validation
 │       └── UpdateCartRequest.php      # Cart update validation
+├── Listeners/
+│   └── ClearProductCache.php          # Invalidates product cache on order events
 ├── Models/
 │   ├── Product.php
 │   ├── Order.php
 │   └── OrderItem.php
-└── Services/
-    ├── CartService.php                # Redis-backed cart logic
-    ├── CheckoutService.php            # Transactional order creation
-    └── RefundService.php              # Transactional refund + stock restore
+├── Repositories/
+│   ├── Contracts/
+│   │   ├── ProductRepositoryInterface.php
+│   │   └── OrderRepositoryInterface.php
+│   └── Eloquent/
+│       ├── ProductRepository.php
+│       └── OrderRepository.php
+├── Services/
+│   └── CartService.php                # Redis-backed cart logic
+└── ValueObjects/
+    └── Money.php                      # Immutable cents-based monetary value
 ```
 
-### Design Decisions
+### Design Patterns
 
-**Service Layer Pattern** — Controllers are kept thin. All business logic lives in dedicated service classes (`CartService`, `CheckoutService`, `RefundService`). This makes the code testable, reusable, and easy to reason about.
+**Repository Pattern** — Interfaces (`ProductRepositoryInterface`, `OrderRepositoryInterface`) decouple business logic from Eloquent. Implementations are bound via `RepositoryServiceProvider`, making the data layer swappable.
+
+**DTO (Data Transfer Object)** — Services and actions return typed `readonly` objects (`ServiceResult`, `CheckoutResult`, `CartItem`) instead of raw arrays. This provides type safety, IDE autocompletion, and self-documenting return types.
+
+**Action Pattern** — Single-responsibility action classes (`ProcessCheckoutAction`, `RefundOrderAction`) replace multi-method service classes. Each action has one public `execute()` method, making the codebase easier to navigate and test.
+
+**Value Object (Money)** — Monetary calculations use an immutable `Money` class that stores values as integer cents internally, eliminating floating-point precision errors in price arithmetic.
+
+**Factory Pattern** — `OrderFactory` encapsulates the complexity of creating an order with its items and decrementing stock, keeping the action class focused on validation and orchestration.
+
+**Event/Listener** — Domain events (`OrderPlaced`, `OrderRefunded`) are dispatched after successful transactions. The `ClearProductCache` listener invalidates the product cache when stock changes, and the pattern is ready for future listeners (emails, notifications, analytics).
+
+### Other Design Decisions
+
+**Thin Controllers** — Controllers are kept thin. Business logic lives in action classes and services.
 
 **Redis for Cart Storage** — Carts are stored in Redis hashes (`cart:{sessionId}`) with a 24-hour TTL. Redis was chosen over database/session because:
 - Carts are ephemeral and don't need ACID guarantees
